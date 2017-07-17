@@ -11,6 +11,7 @@ namespace sched_bench { namespace util {
         extern char const *trace_events_separator;
         extern std::chrono::steady_clock::time_point epoch;
         bool init(char const *filename);
+        void add_metadata(char const *key, char const *value);
         void shutdown();        
 
         template<typename ARG>

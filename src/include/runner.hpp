@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <boost/format.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include "model/transaction.hpp"
 #include "util/functional.hpp"
 #include "util/scope_profile.hpp"
@@ -37,6 +38,22 @@ struct Runner {
 
         // analysis
         uint thread_count;
+
+        template<typename OP>
+        void emit_properties(OP op) const {
+            auto scope_dist_strs = util::map<>(pct_transactions_per_scope_count, [](const double &d, uint) -> std::string {
+                return std::string {(boost::format{"%0.04f"} % d).str()};
+            });
+
+            op("transactionCount", std::to_string(transaction_count).c_str());
+            op("scopePopularityMean", (boost::format{"%0.04f"} % account_popularity_mean).str().c_str() );
+            op("scopePopularityStddev", (boost::format{"%0.04f"} % account_popularity_stddev).str().c_str() );
+            op("scopePopularityMean", (boost::format{"%0.04f"} % account_popularity_mean).str().c_str() );
+            op("threadCount", std::to_string(thread_count).c_str() );
+            op("transactionCostMean", (boost::format{"%0.04f"} % transaction_cost_ms_mean).str().c_str() );
+            op("transactionCostStddev", (boost::format{"%0.04f"} % transaction_cost_ms_stddev).str().c_str() );
+            op("scopeDegreeDist", (boost::format{"[%s]"} % boost::algorithm::join(scope_dist_strs, ", ")).str().c_str() );
+        }
     };
 
     static std::vector<Transaction> generate_transactions(Config const &config);
@@ -156,11 +173,17 @@ struct Runner {
             }
 
             trace_file 
-                << boost::format { "\n], \"schedulerName\":\"%s\", \"estimatedRuntimeMs\": %f, \"schedulerTimeMs\": %f, \"retiredTransactons\": %d }" }
+                << boost::format { "\n], \"schedulerName\":\"%s\", \"estimatedRuntimeMs\": %f, \"schedulerTimeMs\": %f, \"retiredTransactons\": %d" }
                 % fn_name
                 % results.runtime_est_ms
                 % results.duration_ms
                 % results.transactions_retired;
+
+            config.emit_properties([&](char const *k, char const *v) {
+                trace_file << boost::format {",\n\"%s\":\"%s\""} % k % v;
+            });
+
+            trace_file << "\n}";
                 
             trace_file.close();
         }
@@ -200,6 +223,9 @@ struct Runner {
             << boost::format {"    Transaction Cost: %0.04f avg (%0.04f std dev)\n"} % config.transaction_cost_ms_mean % config.transaction_cost_ms_stddev;
 
         std::cout << "=====================================\n";
+
+        config.emit_properties(util::scope_profile::add_metadata);
+        
         // generate transactions
         auto const transactions = generate_transactions(config);
         auto const costs = generate_costs(transactions, config);
