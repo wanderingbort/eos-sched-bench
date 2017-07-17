@@ -59,9 +59,9 @@ struct Standard_Block {
         Standard_Block const &block;
         std::vector<Span> spans;
 
-        int next_span;
-        int current_cycle;
-        int outstanding_threads;
+        uint next_span;
+        uint current_cycle;
+        uint outstanding_threads;
 
         std::vector<Transaction::Id> next() {
             static auto empty = std::vector<Transaction::Id>();

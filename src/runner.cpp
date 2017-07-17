@@ -5,22 +5,23 @@
 #include "model/account.hpp"
 
 using namespace sched_bench;
-static int calculate_num_accounts(int index, std::vector<double> const &weights, int max_transactions) {
+static uint calculate_num_accounts(int index, std::vector<double> const &weights, int max_transactions) {
     double sum_weights = 0.0;
-    for (int i = weights.size() - 1; i >= 0; --i) {
-        sum_weights += weights[i];
+    for (uint i = 0; i < weights.size(); i++) {
+        uint index = weights.size() - i - 1;
+        sum_weights += weights[index];
         int cutoff = std::lrint(std::ceil(sum_weights * (double)max_transactions));
         if (index < cutoff) {
-            return i + 1;
+            return index + 1;
         }
     } 
 
     return 1;
 }
 
-static int calculate_target_account_coverage(std::vector<double> const &weights) {
+static double calculate_target_account_coverage(std::vector<double> const &weights) {
     double result = 0.0;
-    for (int i = 0; i < weights.size(); i++) {
+    for (uint i = 0; i < weights.size(); i++) {
         result += weights[i] * (double)(i + 1);
     }
 
@@ -66,12 +67,12 @@ Runner::generate_transactions(Config const &config) {
     // generate transactions
     std::vector<Transaction> transactions;
     transactions.reserve(config.transaction_count);
-    for (int i = 0; i < config.transaction_count; ++i) {
+    for (uint i = 0; i < config.transaction_count; ++i) {
         // if (i % (config.transaction_count >> 3) == 0) {
         //     std::cout << "Generating Transaction " << i << std::endl;
         // }
 
-        int num_accounts = calculate_num_accounts(i,config.pct_transactions_per_scope_count, config.transaction_count);
+        uint num_accounts = calculate_num_accounts(i,config.pct_transactions_per_scope_count, config.transaction_count);
 
         std::set<Account::Id> referenced_accounts;
         
