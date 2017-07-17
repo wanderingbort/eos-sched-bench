@@ -10,7 +10,7 @@ static uint calculate_num_accounts(int index, std::vector<double> const &weights
     for (uint i = 0; i < weights.size(); i++) {
         uint index = weights.size() - i - 1;
         sum_weights += weights[index];
-        int cutoff = std::lrint(std::ceil(sum_weights * (double)max_transactions));
+        uint cutoff = std::lrint(std::ceil(sum_weights * (double)max_transactions));
         if (index < cutoff) {
             return index + 1;
         }
