@@ -80,5 +80,5 @@ else( WIN32 ) # Apple AND Linux
 endif( WIN32 )
 
 add_executable( sched_bench src/main.cpp src/runner.cpp src/algorithms/graph.cpp src/util/scope_profile.cpp )
-target_include_directories( sched_bench PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/include" )
+target_include_directories( sched_bench PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/include" ${Boost_INCLUDE_DIRS} )
 target_link_libraries( sched_bench LINK_PUBLIC ${Boost_LIBRARIES} )
