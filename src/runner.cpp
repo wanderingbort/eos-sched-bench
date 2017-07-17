@@ -8,11 +8,11 @@ using namespace sched_bench;
 static uint calculate_num_accounts(int index, std::vector<double> const &weights, int max_transactions) {
     double sum_weights = 0.0;
     for (uint i = 0; i < weights.size(); i++) {
-        uint index = weights.size() - i - 1;
-        sum_weights += weights[index];
-        uint cutoff = std::lrint(std::ceil(sum_weights * (double)max_transactions));
+        uint weight_index = weights.size() - i - 1;
+        sum_weights += weights[weight_index];
+        int cutoff = std::lrint(std::ceil(sum_weights * (double)max_transactions));
         if (index < cutoff) {
-            return index + 1;
+            return weight_index + 1;
         }
     } 
 
