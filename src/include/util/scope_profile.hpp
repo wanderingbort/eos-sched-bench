@@ -12,6 +12,7 @@ namespace sched_bench { namespace util {
         extern std::chrono::steady_clock::time_point epoch;
         bool init(char const *filename);
         void add_metadata(char const *key, char const *value);
+        uint get_thread_id();
         void shutdown();        
 
         template<typename ARG>
@@ -29,12 +30,11 @@ namespace sched_bench { namespace util {
         void emit_sample_begin(ARGS... args) {
             auto now = std::chrono::steady_clock::now();
             uint64_t now_us = std::chrono::duration_cast<std::chrono::microseconds>(now - epoch).count();
-            std::hash<std::thread::id> hasher;
-            auto tid = hasher(std::this_thread::get_id());
-
+            auto tid = get_thread_id();
+            
             profile_trace 
                 << trace_events_separator
-                << boost::format { "{ \"tid\": %s, \"pid\": %s, \"ts\": %d, \"ph\": \"B\", \"cat\": \"scope_profile\", \"name\": \"" }
+                << boost::format { "{\"tid\":%s,\"pid\":%s,\"ts\":%d,\"ph\":\"B\",\"cat\":\"P\",\"name\":\"" }
                 % tid
                 % tid
                 % now_us
@@ -49,11 +49,10 @@ namespace sched_bench { namespace util {
         void emit_sample_end() {
             auto now = std::chrono::steady_clock::now();
             uint64_t now_us = std::chrono::duration_cast<std::chrono::microseconds>(now - epoch).count();
-            std::hash<std::thread::id> hasher;
-            auto tid = hasher(std::this_thread::get_id());
+            auto tid = get_thread_id();
             profile_trace 
                 << trace_events_separator
-                << boost::format { "{ \"tid\": %s, \"pid\": %d, \"ts\": %d, \"ph\": \"E\" }" }
+                << boost::format { "{\"tid\":%s,\"pid\":%d,\"ts\":%d,\"ph\":\"E\"}" }
                 % tid
                 % tid
                 % now_us

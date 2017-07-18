@@ -1,3 +1,4 @@
+#include <atomic>
 #include <ctime>
 #include <map>
 #include "util/scope_profile.hpp"
@@ -39,5 +40,18 @@ void shutdown() {
 void add_metadata(char const *key, char const * value) {
     metadata.emplace(key, value);    
 }
+
+static std::atomic_uint next_thread_id(0);
+thread_local boost::optional<uint> this_thread_id;
+
+uint get_thread_id() {
+    if (!this_thread_id) {
+        uint t_id = next_thread_id.fetch_add(1);
+        this_thread_id = boost::optional<uint>(t_id);
+    }
+
+    return *this_thread_id;
+}
+            
 
 }}}
