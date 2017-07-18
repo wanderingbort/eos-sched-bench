@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
     auto results = Runner::execute(*config, 
         "single_thread", algorithms::single_thread, 
         "graph_account_degree", algorithms::graph_by_account_degree,
+        "graph_account_degree_v2", algorithms::graph_by_account_degree_v2,
         "delay_conflicts", algorithms::delay_conflicts
     );
 
