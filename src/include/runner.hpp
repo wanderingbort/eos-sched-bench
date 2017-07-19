@@ -88,7 +88,7 @@ struct Runner {
             double now = 0;
             auto dispatcher = decltype(block)::create_dispatcher(block);
             auto dispatch = dispatcher.next();
-            std::multimap<double, std::pair<uint, std::pair<uint, decltype(dispatch)>>> working_threads;
+            std::multimap<double, std::pair<uint, decltype(dispatch)>> working_threads;
             uint t_id = 0;
             char const *sep = "";
 
@@ -105,11 +105,11 @@ struct Runner {
                 if (!idle_threads.empty() && !dispatch.empty()) {
                     uint thread_id = idle_threads.back();
                     idle_threads.pop_back();
-                    working_threads.emplace(std::make_pair(now + cost, std::make_pair(thread_id, std::make_pair(t_id, dispatch))));
+                    working_threads.emplace(std::make_pair(now + cost, std::make_pair(thread_id, dispatch)));
 
                     trace_file 
                         << sep
-                        << boost::format { "{ \"tid\": %d, \"pid\": %d, \"ts\": %d, \"ph\": \"B\", \"cat\": \"EOSThread\", \"name\": \"Dispatch:%d\", \"args\" : { \"transactions\" : [" }
+                        << boost::format { "{\"tid\":%d,\"pid\":%d,\"ts\":%d,\"ph\":\"B\",\"cat\":\"T\",\"name\":\"D:%d\",\"args\":{\"txs\":[" }
                         % thread_id
                         % thread_id
                         % std::llrint(std::floor(now * 1000.0))
@@ -121,7 +121,7 @@ struct Runner {
                         t_sep = ",";
                     }
 
-                    trace_file << "] }}";
+                    trace_file << "]}}";
                     t_id++;
                     sep = ",\n";
 
@@ -133,8 +133,7 @@ struct Runner {
                     auto next_complete = *iter;
                     working_threads.erase(iter);
                     uint thread_id = next_complete.second.first;
-                    auto completed_dispatch = next_complete.second.second.second;
-                    auto completed_dispatch_id = next_complete.second.second.first;
+                    auto completed_dispatch = next_complete.second.second;
                     double completed_time = next_complete.first;
 
                     results.transactions_retired += completed_dispatch.size();
@@ -145,11 +144,10 @@ struct Runner {
 
                     trace_file 
                         << sep
-                        << boost::format { "{ \"tid\": %d, \"pid\": %d, \"ts\": %d, \"ph\": \"E\", \"cat\": \"EOSThread\", \"name\": \"Dispatch:%d\" }" }
+                        << boost::format { "{\"tid\":%d,\"pid\":%d,\"ts\":%d,\"ph\":\"E\"}" }
                         % thread_id
                         % thread_id
-                        % std::llrint(std::floor(now * 1000.0))
-                        % completed_dispatch_id ; 
+                        % std::llrint(std::floor(now * 1000.0));
 
                     // if our last dispatch was empty, 
                     if (dispatch.empty()) {
