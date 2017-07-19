@@ -127,4 +127,33 @@ Graph graph_by_account_degree(std::vector<Transaction> const &transactions)
     return result;
    
 }
+
+Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions) {
+    static const uint HASH_SIZE = 4096;
+    std::vector<Transaction const *> prev_hash(HASH_SIZE);
+    Graph result;
+    result.roots.reserve(transactions.size());
+
+    for (auto const &t: transactions) {
+        uint prev_count = 0;
+        for (auto const &a : t.accounts ) {
+            uint hash_index = a.as_numeric() % HASH_SIZE;
+
+            auto &prev = prev_hash.at(hash_index);
+            if (prev != nullptr) {
+
+                prev_count++;
+                result.links.emplace(prev->id, t.id);
+            }
+            prev = &t;
+        }
+
+        if (prev_count == 0) {
+            result.roots.emplace_back(t.id);
+        }
+    }
+
+    return result;
+}
+
 }}

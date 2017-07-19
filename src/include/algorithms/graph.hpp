@@ -62,5 +62,7 @@ struct Graph
 };
 
 Graph graph_by_account_degree(std::vector<Transaction> const &transactions);
+Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions);
+
 
 }}
