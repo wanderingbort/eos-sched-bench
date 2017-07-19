@@ -33,6 +33,8 @@ IF(NOT "${Boost_VERSION}" MATCHES "1.53(.*)")
    SET(Boost_LIBRARIES ${BOOST_LIBRARIES_TEMP} ${Boost_LIBRARIES})
 ENDIF()
 
+FIND_PACKAGE(Threads)
+
 if( WIN32 )
 
     message( STATUS "Configuring sched bench on WIN32")
@@ -81,4 +83,4 @@ endif( WIN32 )
 
 add_executable( sched_bench src/main.cpp src/runner.cpp src/algorithms/graph.cpp src/util/scope_profile.cpp )
 target_include_directories( sched_bench PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/include" ${Boost_INCLUDE_DIRS} )
-target_link_libraries( sched_bench LINK_PUBLIC ${Boost_LIBRARIES} )
+target_link_libraries( sched_bench LINK_PUBLIC ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
