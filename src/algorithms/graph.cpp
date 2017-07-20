@@ -142,7 +142,7 @@ Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions) {
             uint hash_index = a.as_numeric() % HASH_SIZE;
 
             auto &prev = prev_hash.at(hash_index);
-            if (prev != nullptr) {
+            if (prev != nullptr && prev != &t) {
                 previous.emplace_back(prev->id);
             }
             prev = &t;
@@ -166,6 +166,7 @@ Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions) {
             previous.clear();
         }
     }
+
 
     return result;
 }
