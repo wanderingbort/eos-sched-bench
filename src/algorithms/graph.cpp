@@ -128,8 +128,27 @@ Graph graph_by_account_degree(std::vector<Transaction> const &transactions)
    
 }
 
+uint next_power_of_two(uint input) {
+    if (input == 0) {
+        return 0;
+    }
+
+    uint result = input;
+    result--;
+    result |= result >> 1;
+    result |= result >> 2;
+    result |= result >> 4;
+    result |= result >> 8;
+    result |= result >> 16;
+    result++;
+    return result;
+}
+
+
 Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions) {
-    static const uint HASH_SIZE = 4096;
+    static std::hash<Account::Id::storage_type> hasher;
+    
+    uint HASH_SIZE = std::max<uint>(4096, next_power_of_two(transactions.size() / 8));
     std::vector<Transaction const *> prev_hash(HASH_SIZE);
     Graph result;
     result.roots.reserve(transactions.size());
@@ -139,7 +158,7 @@ Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions) {
 
     for (auto const &t: transactions) {
         for (auto const &a : t.accounts ) {
-            uint hash_index = a.as_numeric() % HASH_SIZE;
+            uint hash_index = hasher(a.as_numeric()) % HASH_SIZE;
 
             auto &prev = prev_hash.at(hash_index);
             if (prev != nullptr && prev != &t) {
