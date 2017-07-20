@@ -134,22 +134,36 @@ Graph graph_by_hash_conflict(std::vector<Transaction> const &transactions) {
     Graph result;
     result.roots.reserve(transactions.size());
 
+    std::vector<Transaction::Id> previous;
+    previous.reserve(64);
+
     for (auto const &t: transactions) {
-        uint prev_count = 0;
         for (auto const &a : t.accounts ) {
             uint hash_index = a.as_numeric() % HASH_SIZE;
 
             auto &prev = prev_hash.at(hash_index);
             if (prev != nullptr) {
-
-                prev_count++;
-                result.links.emplace(prev->id, t.id);
+                previous.emplace_back(prev->id);
             }
             prev = &t;
         }
 
-        if (prev_count == 0) {
+        if (previous.size() == 0) {
+            // list this transaction as a root
             result.roots.emplace_back(t.id);
+        } else {
+            // list the de-duplicated previous transaction IDs as links
+            std::sort(previous.begin(), previous.end());
+            boost::optional<Transaction::Id> dupe_check;
+            
+            for (auto const &p_id: previous) {
+                if (!dupe_check || p_id != *dupe_check) {
+                    result.links.emplace(p_id, t.id);
+                }
+
+                dupe_check = boost::make_optional(p_id);
+            }
+            previous.clear();
         }
     }
 
