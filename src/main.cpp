@@ -1,5 +1,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
+#include <iostream>
+#include <iomanip>
 
 #include "runner.hpp"
 #include "algorithms/delay_conflicts.hpp"
@@ -55,6 +57,33 @@ boost::optional<Runner::Config> parse_options(int argc, char *argv[]) {
     return boost::optional<Runner::Config>(config);    
 }
 
+template<typename REAL>
+static void print_row(char const *name, REAL duration, REAL runtime) {
+    std::cout << std::setprecision(3) << std::fixed;
+    std::cout << std::setiosflags (std::ios::left);
+    std::cout << std::setw(0) << "| " << std::setw(24) << name;
+    std::cout << std::resetiosflags (std::ios::left);
+    std::cout << std::setw(0) << " | " << std::setw(12) << duration;
+    std::cout << std::setw(0) << " | " << std::setw(12) << runtime;
+    std::cout << std::setw(0) << " |" << std::endl;
+}
+
+static void print_divider() {
+    std::cout << std::setfill('-') << std::setw(58) << "-" << std::endl;
+    std::cout << std::setfill(' ');
+}
+
+static void print_results(std::vector<Runner::Results> const & results) {
+    print_divider();
+    print_row("ALGORITHM NAME", "ALGORITHM",    "ESTIMATED"  );
+    print_row("",               "DURATION(ms)", "RUNTIME(ms)");
+    print_divider();
+    for(auto const &r : results) {
+        print_row(r.scheduler, r.duration_ms, r.runtime_est_ms);
+    }
+    print_divider();
+}
+
 int main(int argc, char *argv[]) {
     
     auto config = parse_options(argc, argv);
@@ -71,6 +100,8 @@ int main(int argc, char *argv[]) {
         ,"graph_by_hash_conflict",  algorithms::graph_by_hash_conflict
         ,"delay_conflicts", algorithms::delay_conflicts
     );
+
+    print_results(results);
 
     util::scope_profile::shutdown();
     return 0;

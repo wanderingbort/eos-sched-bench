@@ -19,6 +19,7 @@ using namespace model;
 struct Runner {
 
     struct Results {
+        char const *scheduler;
         double duration_ms;
         double runtime_est_ms;
         uint transactions_retired;
@@ -65,6 +66,7 @@ struct Runner {
         Results results;
         results.valid = true;
         results.transactions_retired = 0;
+        results.scheduler = fn_name;
 
         std::cout << boost::format {"Scheduling[%s]\n"} % fn_name;
         auto run_schedule_fn = [](Results &results, SCHED_FN fn, std::vector<Transaction> const &transactions) {
