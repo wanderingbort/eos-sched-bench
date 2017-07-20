@@ -60,7 +60,7 @@ struct Runner {
     static std::map<Transaction::Id, double> generate_costs(std::vector<Transaction> const &transactions, Config const &config);
 
     template<typename SCHED_FN>
-    static Results execute_one(std::vector<Transaction> const &transactions, std::map<Transaction::Id, double> const &costs, Config const &config, char const *fn_name, SCHED_FN fn) {
+    static Results execute_one(std::vector<Transaction> const &transactions, std::map<Transaction::Id, double> const &costs, std::map<Transaction::Id, Transaction const *> const &tx_by_id, Config const &config, char const *fn_name, SCHED_FN fn) {
         SCOPE_PROFILE("Execute:", fn_name);
         Results results;
         results.valid = true;
@@ -94,39 +94,58 @@ struct Runner {
 
             trace_file << "{ \"traceEvents\": [\n";
             bool done=false;
+            std::set<Account::Id> locked_accounts;
             while(!done) {
-
-                // get the cost of the sequential transactions
-                double cost = util::reduce<>(dispatch.begin(), dispatch.end(), 0.0, [&](Transaction::Id const &id, double cost) -> double {
-                    return cost + costs.at(id);
-                });
-
                 // find/assign to a thread 
                 if (!idle_threads.empty() && !dispatch.empty()) {
-                    uint thread_id = idle_threads.back();
-                    idle_threads.pop_back();
-                    working_threads.emplace(std::make_pair(now + cost, std::make_pair(thread_id, dispatch)));
+                    double cost = 0.0;
+                    for (auto const &t_id: dispatch) {
+                        cost += costs.at(t_id);
+                        auto t = tx_by_id.at(t_id);
+                        for (auto const &a_id: t->accounts) {
+                            if (locked_accounts.find(a_id) != locked_accounts.end()) {
+                                results.valid = false;
+                                results.error_message = "ACCESS VIOLATION: two parallel dispatches are accessing the same scope";
+                                done = true;
+                            }
+                        }
 
-                    trace_file 
-                        << sep
-                        << boost::format { "{\"tid\":%d,\"pid\":%d,\"ts\":%d,\"ph\":\"B\",\"cat\":\"T\",\"name\":\"D:%d\",\"args\":{\"txs\":[" }
-                        % thread_id
-                        % thread_id
-                        % std::llrint(std::floor(now * 1000.0))
-                        % t_id ; 
-
-                    char const *t_sep = "";
-                    for (auto const &id: dispatch) {
-                        trace_file << t_sep << id.as_numeric();
-                        t_sep = ",";
                     }
 
-                    trace_file << "]}}";
-                    t_id++;
-                    sep = ",\n";
+                    if (!done) {
+                        uint thread_id = idle_threads.back();
+                        idle_threads.pop_back();
+                        working_threads.emplace(std::make_pair(now + cost, std::make_pair(thread_id, dispatch)));
 
-                    // grab the next 
-                    dispatch = dispatcher.next();
+                        for (auto const &t_id: dispatch) {
+                            auto t = tx_by_id.at(t_id);
+                            for (auto const &a_id: t->accounts) {
+                                locked_accounts.emplace(a_id);
+                            }
+
+                        }
+
+                        trace_file 
+                            << sep
+                            << boost::format { "{\"tid\":%d,\"pid\":%d,\"ts\":%d,\"ph\":\"B\",\"cat\":\"T\",\"name\":\"D:%d\",\"args\":{\"txs\":[" }
+                            % thread_id
+                            % thread_id
+                            % std::llrint(std::floor(now * 1000.0))
+                            % t_id ; 
+
+                        char const *t_sep = "";
+                        for (auto const &id: dispatch) {
+                            trace_file << t_sep << id.as_numeric();
+                            t_sep = ",";
+                        }
+
+                        trace_file << "]}}";
+                        t_id++;
+                        sep = ",\n";
+
+                        // grab the next 
+                        dispatch = dispatcher.next();
+                    }
                 } else if (!working_threads.empty()) {
                     // forward time to clear some jobs
                     auto iter = working_threads.begin();
@@ -148,6 +167,14 @@ struct Runner {
                         % thread_id
                         % thread_id
                         % std::llrint(std::floor(now * 1000.0));
+
+                    for (auto const &t_id: completed_dispatch) {
+                        auto t = tx_by_id.at(t_id);
+                        for (auto const &a_id: t->accounts) {
+                            locked_accounts.erase(a_id);
+                        }
+
+                    }
 
                     // if our last dispatch was empty, 
                     if (dispatch.empty()) {
@@ -171,11 +198,17 @@ struct Runner {
             }
 
             trace_file 
-                << boost::format { "\n], \"schedulerName\":\"%s\", \"estimatedRuntimeMs\": %f, \"schedulerTimeMs\": %f, \"retiredTransactons\": %d" }
+                << boost::format { "\n], \"schedulerName\":\"%s\"\n, \"estimatedRuntimeMs\": %f,\n \"schedulerTimeMs\": %f,\n \"retiredTransactons\": %d\n" }
                 % fn_name
                 % results.runtime_est_ms
                 % results.duration_ms
                 % results.transactions_retired;
+
+            if (!results.valid) {
+                trace_file
+                    << boost::format { "\"valid\":false\n, \"errorMessage\": \"%s\",\n" }
+                    % results.error_message;
+            }
 
             config.emit_properties([&](char const *k, char const *v) {
                 trace_file << boost::format {",\n\"%s\":\"%s\""} % k % v;
@@ -190,14 +223,14 @@ struct Runner {
     }
 
     template<typename SCHED_FN>
-    static std::vector<Results> execute_all(std::vector<Transaction> const &transactions, std::map<Transaction::Id, double> const &costs, Config const &config, char const *fn_name, SCHED_FN fn) {
-        return std::vector<Results>({execute_one(transactions, costs, config, fn_name, fn)});
+    static std::vector<Results> execute_all(std::vector<Transaction> const &transactions, std::map<Transaction::Id, double> const &costs, std::map<Transaction::Id, Transaction const *> const &tx_by_id, Config const &config, char const *fn_name, SCHED_FN fn) {
+        return std::vector<Results>({execute_one(transactions, costs, tx_by_id, config, fn_name, fn)});
     }
 
     template<typename SCHED_FN, typename ...ARGS >
-    static std::vector<Results> execute_all(std::vector<Transaction> const &transactions, std::map<Transaction::Id, double> const &costs, Config const &config, char const *fn_name, SCHED_FN fn, ARGS... args) {
-        std::vector<Results> results = execute_all(transactions, costs, config, args...);
-        results.push_back(execute_one(transactions, costs, config, fn_name, fn));
+    static std::vector<Results> execute_all(std::vector<Transaction> const &transactions, std::map<Transaction::Id, double> const &costs, std::map<Transaction::Id, Transaction const *> const &tx_by_id, Config const &config, char const *fn_name, SCHED_FN fn, ARGS... args) {
+        std::vector<Results> results = execute_all(transactions, costs, tx_by_id, config, args...);
+        results.push_back(execute_one(transactions, costs, tx_by_id, config, fn_name, fn));
         return results;
     }
 
@@ -224,12 +257,26 @@ struct Runner {
 
         config.emit_properties(util::scope_profile::add_metadata);
         
+       auto init_map = [](std::vector<Transaction> const &transactions){
+            SCOPE_PROFILE("Map Transactions By ID");
+            // create a map of id -> transaction
+            std::map<Transaction::Id, Transaction const *> transactions_by_id;
+            
+            // create per-account buckets of transaction Ids
+            for (auto const &t: transactions) {
+                transactions_by_id.emplace(t.id, &t);
+            }
+
+            return transactions_by_id;
+        };
+
         // generate transactions
         auto const transactions = generate_transactions(config);
         auto const costs = generate_costs(transactions, config);
-
+        auto const transactions_by_id = init_map(transactions);
+        
         // execute all schedulers
-        auto results = execute_all(transactions, costs, config, args...);
+        auto results = execute_all(transactions, costs, transactions_by_id, config, args...);
         std::reverse(results.begin(), results.end());
         return results;
     }

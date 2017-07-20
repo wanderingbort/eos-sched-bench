@@ -65,10 +65,11 @@ int main(int argc, char *argv[]) {
     util::scope_profile::init("profile.trace");
     
     //print_generated(accounts, transactions);
-    auto results = Runner::execute(*config, 
-        "single_thread", algorithms::single_thread, 
-        "graph_account_degree", algorithms::graph_by_account_degree,
-        "delay_conflicts", algorithms::delay_conflicts
+    auto results = Runner::execute(*config
+        ,"single_thread", algorithms::single_thread
+        ,"graph_account_degree", algorithms::graph_by_account_degree
+        ,"graph_by_hash_conflict",  algorithms::graph_by_hash_conflict
+        ,"delay_conflicts", algorithms::delay_conflicts
     );
 
     util::scope_profile::shutdown();
