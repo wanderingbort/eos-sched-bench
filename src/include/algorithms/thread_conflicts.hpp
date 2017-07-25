@@ -48,7 +48,7 @@ Standard_Block thread_conflicts(std::vector<Transaction> const &transactions) {
     postponed.reserve(transactions.size());
 
     std::vector<uint> txs_per_thread;
-    txs_per_thread.reserve(1024);
+    txs_per_thread.reserve(HASH_SIZE);
 
     int cycle = 0;
     bool scheduled = true;
@@ -77,6 +77,7 @@ Standard_Block thread_conflicts(std::vector<Transaction> const &transactions) {
                 if( !postpone ) {
                     if (!assigned_to) {
                         assigned_to = boost::make_optional<uint>(next_thread++);
+                        txs_per_thread.resize(next_thread);
                     } 
                     
                     if (txs_per_thread[*assigned_to] < MAX_TXS_PER_THREAD ) {
