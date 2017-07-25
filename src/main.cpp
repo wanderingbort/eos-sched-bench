@@ -6,6 +6,7 @@
 #include "runner.hpp"
 #include "algorithms/delay_conflicts.hpp"
 #include "algorithms/single_thread.hpp"
+#include "algorithms/thread_conflicts.hpp"
 #include "algorithms/graph.hpp"
 #include "util/functional.hpp"
 #include "util/scope_profile.hpp"
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]) {
         ,"graph_account_degree", algorithms::graph_by_account_degree
         ,"graph_by_hash_conflict",  algorithms::graph_by_hash_conflict
         ,"delay_conflicts", algorithms::delay_conflicts
+        ,"thread_conflicts", algorithms::thread_conflicts
     );
 
     print_results(results);
