@@ -98,6 +98,7 @@ Standard_Block thread_conflicts(std::vector<Transaction> const &transactions) {
         {
             SCOPE_PROFILE("Reset Tracking");
             current.resize(0);
+            txs_per_thread.resize(0);
             assigned_threads.resize(0); assigned_threads.resize(HASH_SIZE);
             std::swap( current, postponed );
             ++cycle;        
